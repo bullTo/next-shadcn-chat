@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
+import { SiteHeader } from "@/components/site-header";
+import { SectionCards } from "@/components/section-cards";
+import { ChartAreaInteractive } from "@/components/chart-area-interactive";
+import { DataTable } from "@/components/data-table";
+
+import data from "@/util/data.json";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,11 +32,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
     <SidebarProvider>
-      <AppSidebar />
-      <main>
-        <SidebarTrigger />
-        {children}
-      </main>
+      <AppSidebar variant="inset"/>
+      <SidebarInset>
+        <SiteHeader/>
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              <SectionCards/>
+              <div className="px-4 lg:px-6">
+                <ChartAreaInteractive/>
+              </div>
+              <DataTable data={data}/>
+            </div>
+          </div>
+        </div>
+      </SidebarInset>
     </SidebarProvider>
     </body>
     </html>
