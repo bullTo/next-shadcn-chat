@@ -1,103 +1,221 @@
-import Image from "next/image";
+"use client";
+
+import {
+  ChatBubble,
+  ChatBubbleAction,
+  ChatBubbleAvatar,
+  ChatBubbleMessage,
+} from "@/components/ui/chat/chat-bubble";
+import { ChatInput } from "@/components/ui/chat/chat-input";
+import { ChatMessageList } from "@/components/ui/chat/chat-message-list";
+import { Button } from "@/components/ui/button";
+import {
+  CopyIcon,
+  CornerDownLeft,
+  Mic,
+  Paperclip,
+  RefreshCcw,
+  Send,
+  Volume2,
+} from "lucide-react";
+import { useChat } from "@ai-sdk/react";
+import { useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import CodeDisplayBlock from "@/components/code-display-block";
+
+const ChatAiIcons = [
+  {
+    icon: CopyIcon,
+    label: "Copy",
+  },
+  {
+    icon: RefreshCcw,
+    label: "Refresh",
+  },
+  {
+    icon: Volume2,
+    label: "Volume",
+  },
+];
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [isGenerating, setIsGenerating] = useState(false);
+  const {
+    messages,
+    setMessages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    reload,
+    isLoading
+  } = useChat({
+    onResponse(response) {
+      if (response) {
+        console.log(response);
+        setIsGenerating(false);
+      }
+    },
+    onError(error) {
+      if (error) {
+        setIsGenerating(false);
+      }
+    },
+  });
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsGenerating(true);
+    handleSubmit(e);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (isGenerating || isLoading || !input) return;
+      setIsGenerating(true);
+      onSubmit(e as unknown as React.FormEvent<HTMLFormElement>);
+    }
+  };
+
+  const handleActionClick = async (action: string, messageIndex: number) => {
+    console.log("Action clicked:", action, "Message index:", messageIndex);
+    if (action === "Refresh") {
+      setIsGenerating(true);
+      try {
+        await reload();
+      } catch (error) {
+        console.error("Error reloading:", error);
+      } finally {
+        setIsGenerating(false);
+      }
+    }
+
+    if (action === "Copy") {
+      const message = messages[messageIndex];
+      if (message && message.role === "assistant") {
+        navigator.clipboard.writeText(message.content);
+      }
+    }
+  };
+
+  return (
+    <main className="flex h-screen w-full max-w-3xl flex-col items-center mx-auto ">
+      <div className="flex-1 w-full overflow-y-auto">
+        <ChatMessageList>
+          {/* Messages */}
+          {messages &&
+            messages.map((message, index) => (
+              <ChatBubble
+                key={index}
+                variant={message.role == "user" ? "sent" : "received"}
+              >
+                <ChatBubbleAvatar
+                  src=""
+                  fallback={message.role == "user" ? "👨🏽" : "🤖"}
+                />
+                <ChatBubbleMessage>
+                  {message.content
+                    .split("```")
+                    .map((part: string, index: number) => {
+                      if (index % 2 === 0) {
+                        return (
+                          <Markdown key={index} remarkPlugins={[remarkGfm]}>
+                            {part}
+                          </Markdown>
+                        );
+                      } else {
+                        return (
+                          <pre className="whitespace-pre-wrap pt-2" key={index}>
+                            <CodeDisplayBlock code={part} lang="" />
+                          </pre>
+                        );
+                      }
+                    })}
+
+                  {message.role === "assistant" &&
+                    messages.length - 1 === index && (
+                      <div className="flex items-center mt-1.5 gap-1">
+                        {!isGenerating && (
+                          <>
+                            {ChatAiIcons.map((icon, iconIndex) => {
+                              const Icon = icon.icon;
+                              return (
+                                <ChatBubbleAction
+                                  variant="outline"
+                                  className="size-5"
+                                  key={iconIndex}
+                                  icon={<Icon className="size-3" />}
+                                  onClick={() =>
+                                    handleActionClick(icon.label, index)
+                                  }
+                                />
+                              );
+                            })}
+                          </>
+                        )}
+                      </div>
+                    )}
+                </ChatBubbleMessage>
+              </ChatBubble>
+            ))}
+
+          {/* Loading */}
+          {isGenerating && (
+            <ChatBubble variant="received">
+              <ChatBubbleAvatar src="" fallback="🤖" />
+              <ChatBubbleMessage isLoading />
+            </ChatBubble>
+          )}
+        </ChatMessageList>
+      </div>
+
+      {/* Form and Footer fixed at the bottom */}
+      <div className="w-full px-4">
+        <form
+          ref={formRef}
+          onSubmit={onSubmit}
+          className="relative rounded-lg border bg-background focus-within:ring-1 focus-within:ring-ring"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+          <ChatInput
+            value={input}
+            onKeyDown={onKeyDown}
+            onChange={handleInputChange}
+            placeholder="Type your message here..."
+            className="rounded-lg bg-background border-0 shadow-none focus-visible:ring-0"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          <div className="flex items-center p-3 pt-0">
+            <Button variant="ghost" size="icon">
+              <Paperclip className="size-4" />
+              <span className="sr-only">Attach file</span>
+            </Button>
+
+            <Button variant="ghost" size="icon">
+              <Mic className="size-4" />
+              <span className="sr-only">Use Microphone</span>
+            </Button>
+
+            <Button
+              disabled={!input || isLoading}
+              type="submit"
+              size="sm"
+              className="ml-auto gap-1.5"
+            >
+              Send Message
+              <CornerDownLeft className="size-3.5" />
+            </Button>
+          </div>
+        </form>
+      </div>
+    </main>
   );
 }
