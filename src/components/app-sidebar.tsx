@@ -6,12 +6,14 @@ import {
   BarChartIcon,
   CameraIcon,
   ClipboardListIcon,
+  DatabaseIcon,
   FileCodeIcon,
+  FileIcon,
   FileTextIcon,
+  FolderIcon,
   HelpCircleIcon,
-  SearchIcon,
-  SettingsIcon,
-  UsersIcon,
+  LayoutDashboardIcon,
+  ListIcon,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
