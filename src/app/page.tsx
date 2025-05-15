@@ -15,7 +15,6 @@ import {
   Mic,
   Paperclip,
   RefreshCcw,
-  Send,
   Volume2,
 } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
@@ -43,7 +42,6 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const {
     messages,
-    setMessages,
     input,
     handleInputChange,
     handleSubmit,
